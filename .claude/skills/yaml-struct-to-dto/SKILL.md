@@ -177,9 +177,10 @@ python3 <skill>/scripts/scan_dto_candidates.py <类名或路径> --depth 3
      ```bash
      mvn clean install
      ```
-     这和在 IDEA 里先点 clean、再点 install 是一样的：全部模块都会构建，单元测试会运行，产物会安装到本地仓库。**不要**为了省时间加 `-pl`、`-am`、`-o`、`-DskipTests` 这类缩小范围的参数，否则依赖本模块的下游模块和单元测试都验证不到。只有用户说过在 IDEA 里打开了 Skip Tests，才加 `-DskipTests`。
+     这和在 IDEA 里先点 clean、再点 install 是一样的（用户没有开 Skip Tests）：全部模块都会构建，单元测试会运行，产物会安装到本地仓库。**不要**加 `-pl`、`-am`、`-o`、`-DskipTests`、`-Dmaven.test.skip` 这类缩小范围的参数，否则依赖本模块的下游模块和单元测试都验证不到。
    - 命令行没有 `mvn`（IDEA 自带的 Maven 通常不在 PATH 里），或者依赖拉不下来（IDEA 可能配置了自己的 settings.xml 和内网仓库），就**停下来**，请用户在 IDEA 里执行 clean → install，并把结果告诉你（`BUILD SUCCESS`，或者报错信息）。不要自己换别的命令凑合。
-   - 构建失败时，按报错修改，再重新验证，直到 `BUILD SUCCESS`。如果失败和本次改造无关（构建前就已经失败），告诉用户，由用户决定怎么处理。
+   - 构建失败时，按报错修改，再重新验证，直到 `BUILD SUCCESS`。
+   - 单元测试失败时，如果是改造引起的（例如测试里还在用旧类型构造数据，或者 mock 的方法签名变了），就同步修改测试代码。**不要**用跳过、删除、`@Ignore`/`@Disabled` 之类的方式绕过测试。如果失败和本次改造无关（构建前就已经失败），告诉用户，由用户决定怎么处理。
 4. **复读 diff**：`git diff` 逐个文件过一遍，确认没有误改、漏改，也没有无关改动。
 
 ### 8. 提交 commit
