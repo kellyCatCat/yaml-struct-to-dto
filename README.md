@@ -37,4 +37,4 @@ cp -r .claude/skills/yaml-struct-to-dto ~/.claude/skills/
 | 脚本 | 作用 |
 |---|---|
 | `scripts/scan_dto_candidates.py <类名> --depth 3` | 扫描调用链上引用的类型，列出可替换的 Dto、缺失的 Dto、调用链上的业务类 |
-| `scripts/check_changed_files.py --old A,B` | 改完后自检：残留旧类型、缺失 import、未使用 import、重复 import、通配符 import、超长行 |
+| `scripts/check_changed_files.py --old A,B` | 改完后自检，分三类：未使用的 import（含缺失、重复、通配符 import）、残留的旧模型引用、方法调用不匹配（Dto 上不存在的方法、签名仍是旧类型、`@Override` 签名不一致、调用方未修改）。分“错误/警告”两级输出 |

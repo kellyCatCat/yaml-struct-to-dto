@@ -161,16 +161,35 @@ python3 <skill>/scripts/scan_dto_candidates.py <类名或路径> --depth 3
 
 ### 7. 自检
 
-1. **clean code 脚本自检**（必须全部通过）：
+1. **脚本自检**（在仓库内任意目录执行；`--old` 传入替换清单里的全部旧类型）：
    ```bash
    python3 <skill>/scripts/check_changed_files.py --old <旧类型1>,<旧类型2>,...
    ```
-   它会检查改动过的 Java 文件里是否有：残留的旧类型、用了新 Dto 但缺少 import、未使用的 import、重复的 import、新增的通配符 import、新增的超长行。标为“（存量）”的未使用 import 如果和本次改造无关，可以不动。
-2. **全仓库残留检查**：在改造范围内的文件里，不应该再出现旧类型：
-   ```bash
-   grep -rn --include=*.java -wE "<旧类型1>|<旧类型2>" <改造涉及的目录>
-   ```
-   剩下的每一处都要能说清楚为什么保留（例如边界转换处）。
+   脚本对改动过的 Java 文件做三类校验：
+
+   | 类别 | 检查内容 |
+   |---|---|
+   | **未使用的 import** | 未使用的 import；用了新 Dto 但缺少 import（改了名字漏改 import）；重复的 import；新增的通配符 import |
+   | **残留的旧模型引用** | 改动文件中残留的旧类型，包括 import、代码、Javadoc（`{@link}`、`@param` 等） |
+   | **方法调用不匹配** | ① Dto 上不存在的方法：getter/setter、builder 链、`XxxDto::getYyy` 方法引用（能识别 Lombok 的 `@Data`、`@Getter`、`@Setter`、`@Builder` 等注解）<br>② 调用的方法签名仍在使用旧类型（例如 Facade 已经改成传 Dto，Service 方法还是旧类型）<br>③ `@Override` 方法和接口/父类签名不一致（只改了 Impl 没改接口，或者接口改了，但还有别的实现类没改）<br>④ 方法签名已经改成 Dto，但调用方文件没有修改 |
+
+   另外还检查本次新增的超长行。
+
+   输出分两级，**两级都要处理完才能进入下一步**：
+   - **【错误】**：确定的问题，必须修复。有错误时脚本的退出码为 1。
+   - **【警告】**：基于静态分析的疑似问题，要逐条确认。确认是问题就修复；确认是误报（例如边界处有意保留旧类型），就在最终报告中写明原因。
+
+   标为“（存量）”的未使用 import 如果和本次改造无关，可以不动，但要在报告中说明。
+   修改后重新运行脚本，直到没有错误，并且所有警告都已处理。
+
+2. **人工补充检查**（脚本覆盖不到的地方）：
+   - **全仓库残留**：在改造涉及的目录里搜索旧类型，剩下的每一处都要能说清楚为什么保留（例如边界转换处）：
+     ```bash
+     grep -rn --include=*.java -wE "<旧类型1>|<旧类型2>" <改造涉及的目录>
+     ```
+   - **链式调用和 Lambda**：脚本只能校验直接在变量上的调用。像 `rsp.getData().getTunnelList()` 这样的链式调用，以及 `list.forEach(x -> x.getXxx())` 这类推断类型的 Lambda 参数，要对照 Dto 的字段人工核对 getter/setter 名称。
+   - **字段名不同但能编译通过的地方**：`BeanUtils.copyProperties`、`JSON.parseObject`、MapStruct 映射等通过反射或按字段名拷贝的代码，旧类和 Dto 的字段名不一致时**编译不会报错，但运行时会丢数据**。要逐个对比字段名，必要时补上映射。
+   - **重载方法**：同名方法有多个重载时，确认改成 Dto 后实际调用的还是原来那个重载。
 3. **编译验证**（以用户的做法为准：在 IDEA 的 Maven 面板里，对根工程 `NetChatOpsIPExtServiceRoot` 先执行 Lifecycle 的 clean，再执行 install）：
    - 根工程是 `<project>` 下直接写着 `<artifactId>NetChatOpsIPExtServiceRoot</artifactId>` 的 pom.xml，一般就在仓库根目录。注意子模块的 `<parent>` 里也会出现这个名字，不要找错。
    - 命令行能用 `mvn` 时，在根工程目录执行：
@@ -205,4 +224,5 @@ git commit -m "[<DTS单号>][fix][26.1]<模块名>中<类名>中的DTO改造"
 - 新建的 Dto（如果有）；
 - 为了编译而做了最小适配的范围外调用方（如果有）；
 - 保留了旧类型的地方及原因（如果有）；
-- 编译和自检的结果，并注明编译是自己执行的 `mvn clean install`，还是用户在 IDEA 中确认的。
+- 自检结果：按“未使用的 import / 残留的旧模型引用 / 方法调用不匹配”三类分别说明，被判定为误报的警告逐条写明原因；
+- 编译结果，并注明编译是自己执行的 `mvn clean install`，还是用户在 IDEA 中确认的。
