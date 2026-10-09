@@ -10,7 +10,7 @@ argument-hint: <目标Java类名或路径> [DTS单号]
 
 - **目标文件**（必填）：Java 类名（如 `OpsIpranSummaryTunnelFacadeImpl`）或文件路径。
 - **DTS 单号**（必填）：如 `DTS2026092702383`。用户没给时先问，不要自己编造，也不要直接复用示例单号。
-  可以先用 `git log --oneline --grep "DTO改造" -10` 找最近使用的单号，作为建议值供用户确认。
+  可以先用 `git log --oneline --grep "DTO改造" -5 -- <模块路径>` 找同模块最近使用的单号，作为建议值供用户确认。
 
 以下是固定约定：
 
@@ -42,23 +42,7 @@ git pull --ff-only origin br_NCEV1R26C10_Master
 - 工作区不干净时**停下来问用户**，不要擅自 stash、reset 或丢弃改动。
 - `--ff-only` 失败（本地分支和远端分叉）时停下来问用户，不要强行 merge、rebase 或 reset。
 
-### 2. 先学习已经完成的同类改造
-
-改之前先看项目里已经完成的 DTO 改造，照着它们的写法来，保证风格一致：
-
-```bash
-git log --oneline --grep "DTO改造" -20
-git show <commit> --stat
-git show <commit>
-```
-
-重点看清楚：
-- Dto 类放在哪个包，命名、注解（Lombok、`@JsonProperty` 等）是怎么写的；
-- Facade 接口是否一起改了签名；
-- 对外仍然必须使用 yaml 结构体的边界（例如由 yaml 生成的 REST 接口或 Controller）是怎么处理的，有没有转换方法（Converter、Assembler、BeanUtils 等）；
-- 测试代码是怎么同步修改的。
-
-### 3. 定位目标文件和模块
+### 2. 定位目标文件和模块
 
 ```bash
 find . -name "<类名>.java" -not -path "*/target/*"
@@ -66,6 +50,48 @@ find . -name "<类名>.java" -not -path "*/target/*"
 
 - 模块名取目标文件**最近一层带 `pom.xml` 的目录名**（例如 `ipran-app-api-summary`），并和该 `pom.xml` 中的 `<artifactId>` 对照。两者不一致时，以历史 DTO 改造 commit msg 里的写法为准。
 - 有多个同名文件时，向用户确认是哪一个。
+
+### 3. 参考历史改造（只挑 1~3 个样例）
+
+项目里 “DTO改造” 的提交会有很多，**不要逐个去看**。这一步只是为了学习写法，挑几个最相关的样例就够了。
+
+**3.1 先查目标类是否已经改过**
+
+```bash
+git log --oneline --grep "DTO改造" | grep -F "<类名>"
+```
+
+如果有结果，说明这个类之前已经做过（或者部分做过）改造。先看那次提交改了什么，告诉用户，再确认是补齐剩下的部分，还是停止。
+
+**3.2 挑样例**
+
+按下面的优先级挑，挑到 1~3 个就停：
+
+```bash
+# ① 同模块的改造（最相关）
+git log --oneline --grep "DTO改造" -10 -- <模块路径>
+# ② 同模块没有时，再看全仓库最近的
+git log --oneline --grep "DTO改造" -10
+```
+
+- 优先选：同模块 > 时间最近 > 类型相近（同样是 FacadeImpl 的改造）。
+- 先用 `git show --stat <commit>` 看改了哪些文件，挑文件数适中、包含接口和 Impl 的提交。不要上来就看完整 diff。
+- 看 diff 时只看 Java 文件，文件太多就只看接口、Impl、Converter 这几个关键文件：
+  ```bash
+  git show <commit> -- '*.java'
+  git show <commit> -- <具体文件路径>
+  ```
+
+**3.3 要学什么**
+
+- Dto 类放在哪个包，命名、注解（Lombok、`@JsonProperty` 等）是怎么写的；
+- Facade 接口是否一起改了签名；
+- 对外仍然必须使用 yaml 结构体的边界（例如由 yaml 生成的 REST 接口或 Controller）是怎么处理的，有没有转换方法（Converter、Assembler、BeanUtils 等）；
+- 测试代码是怎么同步修改的。
+
+**注意**：
+- 历史提交只用来学**写法**，**不要**拿来当替换清单。要改哪些类型，只以第 4 步的调用链排查结果为准。
+- 几个样例的写法不一致时，以同模块最近的提交为准；分歧较大、拿不准的时候问用户。
 
 ### 4. 沿调用链全量排查（核心）
 

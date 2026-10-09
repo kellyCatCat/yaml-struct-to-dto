@@ -26,7 +26,7 @@ cp -r .claude/skills/yaml-struct-to-dto ~/.claude/skills/
 ## 流程
 
 1. 拉取 `br_NCEV1R26C10_Master` 最新代码
-2. 学习历史 DTO 改造 commit 的写法
+2. 定位目标文件和所在模块，检查目标类是否已经改造过，从同模块的历史 DTO 改造中挑 1~3 个样例学习写法
 3. 从指定 Java 文件出发，沿调用链全量排查 yaml 结构体（接口、其他实现类、Service、Converter、调用方、测试）
 4. 替换为 `XxxDto`，同步修改 import
 5. 跑 clean code 自检脚本，并进行编译验证
