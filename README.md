@@ -29,7 +29,7 @@ cp -r .claude/skills/yaml-struct-to-dto ~/.claude/skills/
 2. 定位目标文件和所在模块，检查目标类是否已经改造过，从同模块的历史 DTO 改造中挑 1~3 个样例学习写法
 3. 从指定 Java 文件出发，沿调用链全量排查 yaml 结构体（接口、其他实现类、Service、Converter、调用方、测试）
 4. 替换为 `XxxDto`，同步修改 import
-5. 跑 clean code 自检脚本，并进行编译验证
+5. 跑 clean code 自检脚本；在根工程 `NetChatOpsIPExtServiceRoot` 上执行 `mvn clean install` 做编译验证（和 IDEA 中 Maven → Lifecycle 先点 clean 再点 install 一致）。命令行跑不了时，请你在 IDEA 中执行后告知结果
 6. 本地提交：`[DTS单号][fix][26.1]<模块名>中<类名>中的DTO改造`（不自动 push）
 
 ## 辅助脚本
